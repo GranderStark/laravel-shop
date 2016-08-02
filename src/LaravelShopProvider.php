@@ -11,7 +11,8 @@ namespace Amsgames\LaravelShop;
  * @package Amsgames\LaravelShop
  */
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Routing\Router;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 
 class LaravelShopProvider extends ServiceProvider
 {
@@ -28,11 +29,13 @@ class LaravelShopProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(Router $router)
     {
+        parent::boot($router);
+
         // Publish config files
         $this->publishes([
-            __DIR__ . '/config/config.php' => config_path('shop.php'),
+            __DIR__ . '/Config/config.php' => config_path('shop.php'),
         ]);
 
         // Register commands
@@ -61,7 +64,7 @@ class LaravelShopProvider extends ServiceProvider
      */
     private function registerShop()
     {
-        $this->app->bind('shop', function ($app) {
+        $this->app->singleton('shop', function ($app) {
             return new LaravelShop($app);
         });
     }
@@ -74,7 +77,7 @@ class LaravelShopProvider extends ServiceProvider
     private function mergeConfig()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/config/config.php', 'shop'
+            __DIR__ . '/Config/config.php', 'shop'
         );
     }
 
@@ -98,8 +101,29 @@ class LaravelShopProvider extends ServiceProvider
     public function provides()
     {
         return [
-            'command.laravel-shop.migration'
+            'shop', 'command.laravel-shop.migration'
         ];
+    }
+
+    /**
+     * Maps router.
+     * Add package special controllers.
+     *
+     * @param Router $route Router.
+     */
+    public function map(Router $router)
+    {
+        $router->group(['namespace' => 'Amsgames\LaravelShop\Http\Controllers'], function($router) {
+
+            $router->group(['prefix' => 'shop'], function ($router) {
+
+                $router->get('callback/payment/{status}/{id}/{shoptoken}', ['as' => 'shop.callback', 'uses' => 'Shop\CallbackController@process']);
+
+                $router->post('callback/payment/{status}/{id}/{shoptoken}', ['as' => 'shop.callback', 'uses' => 'Shop\CallbackController@process']);
+
+            });
+
+        });
     }
 	
 }

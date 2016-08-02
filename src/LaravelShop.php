@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Log;
 use Amsgames\LaravelShop\Exceptions\CheckoutException;
 use Amsgames\LaravelShop\Exceptions\GatewayException;
 use Amsgames\LaravelShop\Exceptions\ShopException;
+use Amsgames\LaravelShop\Events\CartCheckout;
+use Amsgames\LaravelShop\Events\OrderCompleted;
+use Amsgames\LaravelShop\Events\OrderPlaced;
+use Amsgames\LaravelShop\Events\OrderStatusChanged;
 
 class LaravelShop
 {
@@ -27,19 +31,25 @@ class LaravelShop
      * Forces quantity to reset when adding items to cart.
      * @var bool
      */
-    const QUANTITY_RESET            = true;
+    const QUANTITY_RESET                = true;
+
+    /**
+     * Gateway in use.
+     * @var string
+     */
+    protected static $gatewayKey        = null;
+
+    /**
+     * Gateway instance.
+     * @var object
+     */
+    protected static $gateway           = null;
 
     /**
      * Gatway in use.
      * @var string
      */
-    protected static $gateway       = null;
-
-    /**
-     * Gatway in use.
-     * @var string
-     */
-    protected static $exception     = null;
+    protected static $exception         = null;
 
     /**
      * Laravel application
@@ -64,9 +74,10 @@ class LaravelShop
      */
     public function __construct($app)
     {
-        $this->app          = $app;
-        static::$gateway    = $this->getGateway();
-        static::$exception  = null;
+        $this->app              = $app;
+        static::$gatewayKey     = $this->getGateway();
+        static::$exception      = null;
+        static::$gateway        = static::instanceGateway();
     }
 
     /**
@@ -82,12 +93,13 @@ class LaravelShop
     /**
      * Checkout current user's cart.
      */
-    public static function setGateway($gateway)
+    public static function setGateway($gatewayKey)
     {
-        if (!array_key_exists($gateway, Config::get('shop.gateways')))
+        if (!array_key_exists($gatewayKey, Config::get('shop.gateways')))
             throw new ShopException('Invalid gateway.');
-        static::$gateway = $gateway;
-        Session::push('shop.gateway', $gateway);
+        static::$gatewayKey = $gatewayKey;
+        static::$gateway    = static::instanceGateway();
+        Session::push('shop.gateway', $gatewayKey);
     }
 
     /**
@@ -95,7 +107,10 @@ class LaravelShop
      */
     public static function getGateway()
     {
-        return Session::get('shop.gateway')[0]; 
+        $gateways = Session::get('shop.gateway');
+        return $gateways && count($gateways) > 0
+            ? $gateways[count($gateways) - 1]
+            : null;
     }
 
     /**
@@ -107,24 +122,26 @@ class LaravelShop
      */
     public static function checkout($cart = null)
     {
+        $success = true;
         try {
-            if (empty(static::$gateway)) {
+            if (empty(static::$gatewayKey)) {
                 throw new ShopException('Payment gateway not selected.');
             }
             if (empty($cart)) $cart = Auth::user()->cart;
-            $gateway = static::instanceGateway();
-            $gateway->onCheckout($cart);
+            static::$gateway->onCheckout($cart);
         } catch (ShopException $e) {
             static::setException($e);
-            return false;
+            $success = false;
         } catch (CheckoutException $e) {
             static::$exception = $e;
-            return false;
+            $success = false;
         } catch (GatewayException $e) {
             static::$exception = $e;
-            return false;
+            $success = false;
         }
-        return true;
+        if ($cart)
+            \event(new CartCheckout($cart->id, $success));
+        return $success;
     }
 
     /**
@@ -137,20 +154,26 @@ class LaravelShop
     public static function placeOrder($cart = null)
     {
         try {
-            if (empty(static::$gateway))
+            if (empty(static::$gatewayKey))
                 throw new ShopException('Payment gateway not selected.');
             if (empty($cart)) $cart = Auth::user()->cart;
             $order = $cart->placeOrder();
-            $gateway = static::instanceGateway();
-            if ($gateway->onCharge($order)) {
-                $order->statusCode = 'completed';
+            $statusCode = $order->statusCode;
+            \event(new OrderPlaced($order->id));
+            static::$gateway->setCallbacks($order);
+            if (static::$gateway->onCharge($order)) {
+                $order->statusCode = static::$gateway->getTransactionStatusCode();
                 $order->save();
                 // Create transaction
                 $order->placeTransaction(
-                    static::$gateway,
-                    $gateway->getTransactionId(),
-                    $gateway->getTransactionDetail()
+                    static::$gatewayKey,
+                    static::$gateway->getTransactionId(),
+                    static::$gateway->getTransactionDetail(),
+                    static::$gateway->getTransactionToken()
                 );
+                // Fire event
+                if ($order->isCompleted)
+                    \event(new OrderCompleted($order->id));
             } else {
                 $order->statusCode = 'failed';
                 $order->save();
@@ -160,16 +183,79 @@ class LaravelShop
             if (isset($order)) {
                 $order->statusCode = 'failed';
                 $order->save();
+                // Create failed transaction
+                $order->placeTransaction(
+                    static::$gatewayKey,
+                    uniqid(),
+                    static::$exception->getMessage(),
+                    $order->statusCode
+                );
             }
         } catch (GatewayException $e) {
             static::$exception = $e;
             if (isset($order)) {
                 $order->statusCode = 'failed';
                 $order->save();
+                // Create failed transaction
+                $order->placeTransaction(
+                    static::$gatewayKey,
+                    uniqid(),
+                    static::$exception->getMessage(),
+                    $order->statusCode
+                );
             }
         }
-        return $order;
+        if ($order) {
+            static::checkStatusChange($order, $statusCode);
+            return $order;
+        } else {
+            return;
+        }
     }
+
+    /**
+     * Handles gateway callbacks.
+     *
+     * @param string $order  Order.
+     * @param string $status Callback status
+     */
+    public static function callback($order, $transaction, $status, $data = null)
+    {
+        $statusCode = $order->statusCode;
+        try {
+            if (in_array($status, ['success', 'fail'])) {
+                static::$gatewayKey = $transaction->gateway;
+                static::$gateway = static::instanceGateway();
+                if ($status == 'success') {
+                    static::$gateway->onCallbackSuccess($order, $data);
+                    $order->statusCode = static::$gateway->getTransactionStatusCode();
+                    // Create transaction
+                    $order->placeTransaction(
+                        static::$gatewayKey,
+                        static::$gateway->getTransactionId(),
+                        static::$gateway->getTransactionDetail(),
+                        static::$gateway->getTransactionToken()
+                    );
+                    // Fire event
+                    if ($order->isCompleted)
+                        \event(new OrderCompleted($order->id));
+                } else if ($status == 'fail') {
+                    static::$gateway->onCallbackFail($order, $data);
+                    $order->statusCode = 'failed';
+                }
+                $order->save();
+            }
+        } catch (ShopException $e) {
+            static::setException($e);
+            $order->statusCode = 'failed';
+            $order->save();
+        } catch (GatewayException $e) {
+            static::setException($e);
+            $order->statusCode = 'failed';
+            $order->save();
+        }
+        static::checkStatusChange($order, $statusCode);
+    } 
 
     /**
      * Formats any value to price format set in config.
@@ -201,8 +287,8 @@ class LaravelShop
      * @return object
      */
     public static function gateway()
-    {
-        return static::instanceGateway();
+    {   
+        return static::$gateway;
     }
 
     /**
@@ -232,8 +318,20 @@ class LaravelShop
      */
     protected static function instanceGateway()
     {
-        if (empty(static::$gateway)) return;
-        $className = '\\' . Config::get('shop.gateways')[static::$gateway];
-        return new $className(static::$gateway);
+        if (empty(static::$gatewayKey)) return;
+        $className = '\\' . Config::get('shop.gateways')[static::$gatewayKey];
+        return new $className(static::$gatewayKey);
+    }
+
+    /**
+     * Check on order status differences and fires event.
+     * @param object $order Order.
+     * @param string $prevStatusCode Previous status code.
+     * @return void 
+     */
+    protected static function checkStatusChange($order, $prevStatusCode)
+    {
+        if (!empty($prevStatusCode) && $order->statusCode != $prevStatusCode)
+            \event(new OrderStatusChanged($order->id, $order->statusCode, $prevStatusCode));
     }
 }
