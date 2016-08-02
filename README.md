@@ -82,19 +82,48 @@ On the horizon:
 
 ## Installation
 
-With composer
 
-```bash
-composer require amsgames/laravel-shop
-```
-
-Or add
+Add
 
 ```json
-"amsgames/laravel-shop": "0.2.*"
+""amsgames/laravel-shop": "5.2""
 ```
 
-to your composer.json. Then run `composer install` or `composer update`.
+and
+
+```json
+"granderstark-amsgames-laravel-shop": {
+            "type": "package",
+            "package": {
+                "name": "amsgames/laravel-shop",
+                "type": "laravel-module",
+                "version": "5.2",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/GranderStark/laravel-shop.git",
+                    "reference": "v0.2"
+                },
+                "require": {
+                    "php": ">=5.5.9",
+                    "illuminate/console": "~5.0",
+                    "illuminate/support": "~5.0",
+                    "amsgames/laravel-shop-gateway-paypal": "1.0.*"
+                },
+                "classmap": [
+                    "src/Commands"
+                ],
+                "autoload": {
+                    "psr-4" : {
+                        "Amsgames\\LaravelShop\\": "src"
+                    }
+                }
+
+            }
+        }
+```
+inside your `repositories` section
+
+in your composer.json. Then run `composer install` or `composer update` with option `--optimize-autoloader`.
 
 Then in your `config/app.php` add 
 
