@@ -1,4 +1,4 @@
-LARAVEL SHOP (Laravel 5.1 Package)
+LARAVEL SHOP (Laravel 5 Package)
 --------------------------------
 
 [![Latest Stable Version](https://poser.pugx.org/amsgames/laravel-shop/v/stable)](https://packagist.org/packages/amsgames/laravel-shop)
@@ -6,13 +6,11 @@ LARAVEL SHOP (Laravel 5.1 Package)
 [![Latest Unstable Version](https://poser.pugx.org/amsgames/laravel-shop/v/unstable)](https://packagist.org/packages/amsgames/laravel-shop)
 [![License](https://poser.pugx.org/amsgames/laravel-shop/license)](https://packagist.org/packages/amsgames/laravel-shop)
 
-Laravel Shop is flexible way to add shop functionality to **Laravel 5.1**. Aimed to be the e-commerce solution for artisans.
+Laravel Shop is flexible way to add shop functionality to **Laravel 5**. Aimed to be the e-commerce solution for artisans.
 
 Laravel shop adds shopping cart, orders and payments to your new or existing project; letting you transform any model into a shoppable item.
 
-**Supports**
-
-![PayPal](http://kamleshyadav.com/demo_ky/eventmanagementsystem/assets/front/images/paypal.png) ![Omnipay](http://s18.postimg.org/g68f3fs09/omnipay.jpg)
+**NOTE:** A paypal gateway is currently in development. Is recommended to use this package once paypal is available because current transactions and gateway functionality may be affected.
 
 ## Contents
 
@@ -29,15 +27,11 @@ Laravel shop adds shopping cart, orders and payments to your new or existing pro
         - [Existing Model Conversion](#existing-model-conversion)
     - [Dump Autoload](#dump-autoload)
     - [Payment Gateways](#payment-gateways)
-        - [PayPal](#paypal)
-        - [Omnipay](#omnipay)
 - [Usage](#usage)
     - [Shop](#shop)
-        - [Purchase Flow](#purchase-flow)
         - [Payment Gateway](#payment-gateway)
         - [Checkout](#checkout)
         - [Order placement](#exceptions)
-        - [Payments](#payments)
         - [Exceptions](#order-placement)
     - [Shopping Cart](#shopping-cart)
         - [Adding Items](#adding-items)
@@ -49,15 +43,9 @@ Laravel shop adds shopping cart, orders and payments to your new or existing pro
     - [Order](#order-1)
         - [Placing Transactions](#placing-transactions)
         - [Order Methods](#order-methods)
-    - [Events](#events)
-        - [Handler Example](#event-handler-example)
 - [Payment Gateway Development](#payment-gateway-development)
-  - [Transaction](#transaction-1)
-  - [Callbacks](#callbacks)
-  - [Exceptions](#exception)
 - [License](#license)
 - [Additional Information](#additional-information)
-- [Change Log](#change-log)
 
 ## Scope
 
@@ -67,13 +55,15 @@ Current version includes:
 - Cart
 - Orders
 - Transactions
-- Payment gateways support
-- PayPal
+- Payment gateways
+
+Under development:
+
+- Paypal Gateway
 - Events
 
 On the horizon:
 
-- Guest user cart
 - Shipping orders
 - Coupons
 - Product and variations solution
@@ -82,16 +72,10 @@ On the horizon:
 
 ## Installation
 
-With composer
-
-```bash
-composer require amsgames/laravel-shop
-```
-
-Or add
+In order to install Laravel Shop, you can run
 
 ```json
-"amsgames/laravel-shop": "0.2.*"
+"amsgames/laravel-shop": "dev-dev"
 ```
 
 to your composer.json. Then run `composer install` or `composer update`.
@@ -99,7 +83,7 @@ to your composer.json. Then run `composer install` or `composer update`.
 Then in your `config/app.php` add 
 
 ```php
-Amsgames\LaravelShop\LaravelShopProvider::class,
+'Amsgames\LaravelShop\LaravelShopProvider'
 ```
     
 in the `providers` array.
@@ -107,10 +91,12 @@ in the `providers` array.
 Then add
 
 ```php
-'Shop'      => Amsgames\LaravelShop\LaravelShopFacade::class,
+'Shop'      => 'Amsgames\LaravelShop\LaravelShopFacade',
 ```
     
 in the `aliases` array.
+
+Note: This project is still in development stage, we recommend to use this package once a release version is in place.
 
 ## Configuration
 
@@ -119,7 +105,7 @@ Set the configuration values in the `config/auth.php` file. This package will us
 Publish the configuration for this package to further customize table names, model namespaces, currencies and other values. Run the following command:
 
 ```bash
-php artisan vendor:publish
+php artisan laravel-shop:publish
 ```
 
 A `shop.php` file will be created in your app/config directory.
@@ -160,7 +146,7 @@ class DatabaseSeeder extends Seeder
 }
 ```
 
-Run seeder (do `composer dump-autoload first`): 
+Run seeder: 
 
 ```bash
 php artisan db:seed
@@ -168,7 +154,7 @@ php artisan db:seed
 
 ### Models
 
-The following models must be created for the shop to function, these models can be customizable to fir your needs.
+The following models must be created for the shop to function, these models can be customizable to fill your software needs.
 
 #### Item
 
@@ -208,7 +194,6 @@ The `Item` model has the following main attributes:
 - `displayShipping` &mdash; Tax value formatted for shop display. i.e. "$9.99" instead of just "9.99".
 - `displayName` &mdash; Based on the model's item name property.
 - `shopUrl` &mdash; Based on the model's item route property.
-- `wasPurchased` &mdash; Flag that indicates if item was purchased. This base on the status set in config file.
 - `created_at` &mdash; When the item record was created in the database.
 - `updated_at` &mdash; Last time when the item was updated.
 
@@ -320,7 +305,6 @@ The `Order` model has the following main attributes:
 - `gateway` &mdash; Gateway used.
 - `transaction_id` &mdash; Transaction id returned by gateway.
 - `detail` &mdash; Detail returned by gateway.
-- `token` &mdash; Token for gateway callbacks.
 - `created_at` &mdash; When the order record was created in the database.
 - `updated_at` &mdash; Last time when the order was updated.
 
@@ -469,28 +453,20 @@ Dump composer autoload
 composer dump-autoload
 ```
 
+**And you are ready to go.**
+
 ### Payment Gateways
 
-Installed payment gateways can be configured and added in the `gateways` array in the `shop.php` config file, like:
+Installed payment gateways can be configured in the `shop.php` config file, i.e.:
 
 ```php
 'gateways' => [
-    'paypal'            =>  Amsgames\LaravelShopGatewayPaypal\GatewayPayPal::class,
-    'paypalExpress'     =>  Amsgames\LaravelShopGatewayPaypal\GatewayPayPalExpress::class,
+    'testPass'            =>  Amsgames\LaravelShop\Gateways\GatewayPass::class,
+    'testFail'            =>  Amsgames\LaravelShop\Gateways\GatewayFail::class,
 ],
 ```
 
-#### PayPal
-
-Laravel Shop comes with PayPal support out of the box. You can use PayPal's `Direct Credit Card` or `PayPal Express` payments.
-
-To configure PayPal and know how to use the gateways, please visit the [PayPal Gateway Package](https://github.com/amsgames/laravel-shop-gateway-paypal) page. 
-
-#### Omnipay
-
-Install [Omnipay Gateway](https://github.com/amostajo/laravel-shop-gateway-omnipay) to enable other payment services like 2Checkout, Authorize.net, Stripe and to name a few.
-
-You might need to get some extra understanding about how [Omnipay](https://github.com/thephpleague/omnipay) works.
+**And you are ready to go.**
 
 ## Usage
 
@@ -503,24 +479,12 @@ $formatted = Shop::format(9.99);
 // i.e. this will return $9.99 or the format set in the config file.
 ```
 
-#### Purchase Flow
-
-With Laravel Shop you can customize things to work your way, although we recommend standarize your purchase or checkout flow as following (will explain how to use the shop methods below):
-
-![Purchase Flow](http://s12.postimg.org/zfmsz6krh/laravelshop_New_Page.png)
-
-* (Step 1) - User views his cart.
-* (Step 2) - Continues into selecting the gateway to use.
-* (Step 3) - Continues into feeding the gateway selected with required information.
-* (Step 4) - Checkouts cart and reviews cart before placing order.
-* (Step 5) - Places order.
-
 #### Payment Gateway
 
 Before any shop method is called, a payment gateway must be set:
 
 ```php
-// Select the gateway to use
+// Checkout current users cart
 Shop::setGateway('paypal');
 
 echo Shop::getGateway(); // echos: paypal
@@ -564,14 +528,6 @@ $order = Shop::placeOrder($cart);
 
 This will call the `onCharge` function in the payment gateway and charge the user with the orders' total amount. `placeOrder()` will return an `Order` model with which you can verify the status and retrieve the transactions generated by the gateway.
 
-#### Payments
-
-Payments are handled gateways, this package comes with PayPal out of the box.
-
-You can use PayPal's `Direct Credit Card` or `PayPal Express` payments.
-
-To configure PayPal and know how to use its gateways, please visit the [PayPal Gateway Package](https://github.com/amsgames/laravel-shop-gateway-paypal) page. 
-
 #### Exceptions
 
 If checkout or placeOrder had errores, you can call and see the exception related:
@@ -592,6 +548,10 @@ if ($order->hasFailed) {
 ```
 
 Critical exceptions are stored in laravel's log.
+
+**NOTE:** `placeOrder()` will create an order, relate all the items in cart to the order and empty the cart. The `Order` model doen't include methods to add or remove items, any modification to the cart must be done before the order is placed. Be aware of this when designing your checkout flow.
+
+This will call the `onCharge` function in the payment gateway and charge the user with the orders' total amount. `placeOrder()` will return an `Order` model with which you can verify the status and retrieve the transactions generated by the gateway.
 
 ### Shopping Cart
 Carts are created per user in the database, this means that a user can have his cart saved when logged out and when he switches to a different device.
@@ -718,15 +678,6 @@ To empty cart:
 $cart->clear();
 ```
 
-These methods can be chained:
-
-```php
-$cart->add($product, 5)
-    ->add($product2)
-    ->remove($product3)
-    ->clear();
-```
-
 #### Cart Methods
 
 ```php
@@ -785,7 +736,6 @@ Cart amount calculations:
 		<tr>
 			<td>Subtotal:</td>
 			<td>{{ $cart->displayTotalPrice }}</td>
-            <td>{{ $cart->totalPrice }}</td>
 		</tr>
 		<tr>
 			<td>Shipping:</td>
@@ -801,7 +751,6 @@ Cart amount calculations:
 		<tr>
 			<th>Total:</th>
 			<th>{{ $cart->displayTotal }}</th>
-            <th>{{ $cart->total }}</th>
 		</tr>
 	</tfoot>
 
@@ -858,7 +807,7 @@ Find orders form user:
 // Get orders from specific user ID.
 $orders = Order::findByUser($userId);
 // Get orders from specific user ID and status.
-$canceled_orders = Order::findByUser($userId, 'canceled');
+$canceled_orders = Order::findByUser($userId, 'completed');
 ```
 
 #### Placing Transactions
@@ -893,12 +842,12 @@ $completed_orders = Order::whereUser($userId)
 #### Order Status Codes
 
 Status codes out of the box:
-- `in_creation` &mdash; Order status in creation. Or use `$order->isInCreation`.
-- `pending` &mdash; Pending for payment. Or use `$order->isPending`.
-- `in_process` &mdash; In process of shipping. In process of revision. Or use `$order->isInProcess`.
-- `completed` &mdash; When payment has been made and items were delivered to client. Or use `$order->isCompleted`.
-- `failed` &mdash; When payment failed. Or use `$order->hasFailed`.
-- `canceled` &mdash; When an order has been canceled by the user. Or use `$order->isCanceled`.
+- `in_creation` &mdash; Order status in creation.
+- `pending` &mdash; i.e. Pending for payment.
+- `in_process` &mdash; i.e. In process of shipping. In process of revision.
+- `completed` &mdash; i.e. When payment has been made and items were delivered to client.
+- `failed` &mdash; i.e. When payment failed.
+- `canceled` &mdash; i.e. When an order has been canceled by the user.
 
 You can use your own custom status codes. Simply add them manually to the `order_status` database table or create a custom seeder like this:
 
@@ -931,74 +880,8 @@ if ($order->is($myStatusCode)) {
 }
 ```
 
-### Events
-
-Laravel Shop follows [Laravel 5 guidelines](http://laravel.com/docs/5.1/events) to fire events, create your handlers and listeners like you would normally do to use them.
-
-| Event  | Description | Data passed |
-| ------------- | ------------- | ------------- |
-| Cart checkout | Event fired after a shop has checkout a cart. | `id` - Cart Id `success` - Checkout result (boolean) |
-| Order placed | Event fired when an order has been placed. | `id` - Order Id |
-| Order completed | Event fired when an order has been completed. | `id` - Order Id |
-| Order status changed | Event fired when an order's status has been changed. | `id` - Order Id `statusCode` - New status `previousStatusCode` - Prev status |
-
-Here are the events references:
-
-| Event  | Reference |
-| ------------- | ------------- |
-| Cart checkout | `Amsgames\LaravelShop\Events\CartCheckout` |
-| Order placed | `Amsgames\LaravelShop\Events\OrderPlaced` |
-| Order completed | `Amsgames\LaravelShop\Events\OrderCompleted` |
-| Order status changed | `Amsgames\LaravelShop\Events\OrderStatusChanged` |
-
-#### Event Handler Example
-
-An example of how to use an event in a handler:
-
-```php
-<?php
-
-namespace App\Handlers\Events;
-
-use App\Order;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
-
-use Amsgames\LaravelShop\Events\OrderCompleted;
-
-class NotifyPurchase implements ShouldQueue
-{
-    use InteractsWithQueue;
-
-    /**
-     * Handle the event.
-     *
-     * @param  OrderPurchased $event
-     * @return void
-     */
-    public function handle(OrderCompleted $event)
-    {
-        // The order ID
-        echo $event->id;
-
-        // Get order model object
-        $order = Order::find($event->id);
-
-        // My code here...
-    }
-}
-```
-
-Remember to register your handles and listeners at the Event Provider:
-
-```php
-        'Amsgames\LaravelShop\Events\OrderCompleted' => [
-            'App\Handlers\Events\NotifyPurchase',
-        ],
-```
-
 ## Payment Gateway Development
-Laravel Shop has been developed for customization in mind. Allowing the community to expand its capabilities.
+Laravel Shop has been developed for customization in mind. Allowing the future community to expand its capabilities.
 
 Missing payment gateways can be easily developed as external packages and then be configured in the config file. 
 
@@ -1017,7 +900,6 @@ class GatewayPayPal extends PaymentGateway
 {
     /**
      * Called on cart checkout.
-     * THIS METHOD IS OPTIONAL, DONE FOR GATEWAY VALIDATIONS BEFORE PLACING AN ORDER
      *
      * @param Order $order Order.
      */
@@ -1038,10 +920,31 @@ class GatewayPayPal extends PaymentGateway
         throw new GatewayException('Payment failed.');
         return false;
     }
+
+    /**
+     * Returns the transaction ID generated by the gateway.
+     * i.e. PayPal's transaction ID.
+     *
+     * @return mixed
+     */
+    public function getTransactionId()
+    {
+      return uniqid();
+    }
+
+    /**
+     * Returns a 1024 length string with extra detail of transaction.
+     *
+     * @return string
+     */
+    public function getTransactionDetail()
+    {
+      return;
+    }
 }
 ```
 
-The gateway will require `onCharge` method as minimun. You can add more depending your needs.
+The gateway will require those 4 methods as minimun. You can add more depending your needs.
 
 Once created, you can add it to the `shop.php` config file, like:
 
@@ -1057,111 +960,6 @@ And use it like:
 Shop::setGateway('paypal');
 ```
 
-### Transaction
-
-To properly generate the transaction there are 3 properties you must consider on setting during `onCharge`:
-
-```php
-public function onCharge($order)
-{
-    // The transaction id generated by the provider i.e.
-    $this->transactionId = $paypal->transactionId;
-
-    // Custom detail of 1024 chars.
-    $this->detail = 'Paypal: success';
-
-    // Order status after method call.
-    $this->statusCode = 'in_process';
-
-    return true;
-}
-```
-- `transactionId` &mdash; Provider's transaction ID, will help identify a transaction.
-- `detail` &mdash; Custom description for the transaction.
-- `statusCode` &mdash; Order status code with which to update the order after onCharge has executed. By default is 'completed'.
-
-### Callbacks
-
-Laravel Shop supports gateways that require callbacks. For this, you will need to add 2 additional functions to your gateway:
-
-```php
-<?php
-
-namespace Vendor\Package;
-
-use Amsgames\LaravelShop\Core\PaymentGateway;
-use Amsgames\LaravelShop\Exceptions\CheckoutException;
-use Amsgames\LaravelShop\Exceptions\GatewayException;
-
-class GatewayWithCallbacks extends PaymentGateway
-{
-    /**
-     * Called by shop to charge order's amount.
-     *
-     * @param Order $order Order.
-     *
-     * @return bool
-     */
-    public function onCharge($order)
-    {
-
-        // Set the order to pending.
-        $this->statusCode = 'pending';
-
-        // Sets provider with the callback for successful transactions.
-        $provider->setSuccessCallback( $this->callbackSuccess );
-
-        // Sets provider with the callback for failed transactions.
-        $provider->setFailCallback( $this->callbackFail );
-
-        return true;
-    }
-
-    /**
-     * Called on callback.
-     *
-     * @param Order $order Order.
-     * @param mixed $data  Request input from callback.
-     *
-     * @return bool
-     */
-    public function onCallbackSuccess($order, $data = null)
-    {
-        $this->statusCode     = 'completed';
-
-        $this->detail         = 'successful callback';
-
-        $this->transactionId  = $data->transactionId;
-
-        // My code...
-    }
-
-    /**
-     * Called on callback.
-     *
-     * @param Order $order Order.
-     * @param mixed $data  Request input from callback.
-     *
-     * @return bool
-     */
-    public function onCallbackFail($order, $data = null)
-    {
-        $this->detail       = 'failed callback';
-
-        // My code...
-    }
-}
-```
-In the example above, `onCharge` instead of creating a completed transaction, it is creating a pending transaction and indicating the provider to which urls to call back with the payment results.
-
-The methods `onCallbackSuccess` and `onCallbackFail` are called by `Shop` when the provider calls back with its reponse, the proper function will be called depending on the callback url used by the provider.
-
-The method `onCallbackSuccess` will create a new transaction for the order it ends.
-
-- `callbackSuccess` &mdash; Successful url callback to be used by the provider.
-- `callbackFail` &mdash; i.e. Failure url callback to be used by the provider.
-- `token` &mdash; i.e. Validation token.
-
 ### Exceptions
 
 Laravel Shop provides several exceptions you can use to report errors.
@@ -1171,19 +969,11 @@ For `onCheckout`:
 - `GatewayException`
 - `StoreException` &mdash; This exception will be logged in laravel, so use it only for fatal errores.
 
-For `onChange`, `onCallbackSuccess` and `onCallbackFail`:
+For `onChange`:
 - `GatewayException`
 - `StoreException` &mdash; This exception will be logged in laravel, so use it only for fatal errores.
 
 **NOTE**: Laravel Shop will not catch any other exception. If a normal `Exception` or any other exceptions is thrown, it will break the method as it normally would, this will affect your checkout flow like in example when you want to get the order from `placeOrder()`.
-
-### Examples
-
-You can see the [PayPal gateways](https://github.com/amsgames/laravel-shop-gateway-paypal/tree/master/src) we made as examples.
-
-- [GatewayPayPal](https://github.com/amsgames/laravel-shop-gateway-paypal/blob/master/src/GatewayPayPal.php) - Processes credit cards, uses `onCheckout` and `onCharge`.
-
-- [GatewayPayPalExpress](https://github.com/amsgames/laravel-shop-gateway-paypal/blob/master/src/GatewayPayPalExpress.php) - Processes callbacks, uses `onCallbackSuccess` and `onCharge`.
 
 ## License
 
@@ -1192,6 +982,3 @@ Laravel Shop is free software distributed under the terms of the MIT license.
 ## Additional Information
 
 This package's architecture and design was inpired by the **Zizaco/entrust** package, we'll like to thank their contributors for their awesome woek.
-
-## Change Log
-* [v0.2.8](https://github.com/amsgames/laravel-shop/releases/tag/v0.2.8)

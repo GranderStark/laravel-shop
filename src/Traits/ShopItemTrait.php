@@ -12,7 +12,6 @@ namespace Amsgames\LaravelShop\Traits;
  * @package Amsgames\LaravelShop
  */
 
-use Auth;
 use Shop;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
@@ -147,21 +146,6 @@ trait ShopItemTrait
     public function getDisplayShippingAttribute()
     {
         return Shop::format(array_key_exists('shipping', $this->attributes) ? $this->attributes['shipping'] : 0.00);
-    }
-
-    /**
-     * Returns flag indicating if item was purchased by user.
-     *
-     * @return bool
-     */
-    public function getWasPurchasedAttribute()
-    {
-        if (Auth::guest()) return false;
-        return Auth::user()
-            ->orders()
-            ->whereSKU($this->attributes['sku'])
-            ->whereStatusIn(config('shop.order_status_purchase'))
-            ->count() > 0;
     }
 
 }

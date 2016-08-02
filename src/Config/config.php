@@ -13,16 +13,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Shop name
-    |--------------------------------------------------------------------------
-    |
-    | Shop name.
-    |
-    */
-    'name' => 'Laravel Shop',
-
-    /*
-    |--------------------------------------------------------------------------
     | Cart Model
     |--------------------------------------------------------------------------
     |
@@ -256,28 +246,7 @@ return [
     |
     */
     'gateways' => [
-        'paypal'            =>  Amsgames\LaravelShopGatewayPaypal\GatewayPayPal::class,
-        'paypalExpress'     =>  Amsgames\LaravelShopGatewayPaypal\GatewayPayPalExpress::class,
+        //'testPass'            =>  'GatewayPass',
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Gatewall payment callback
-    |--------------------------------------------------------------------------
-    |
-    | Which route to call for gateway callbacks.
-    |
-    */
-    'callback_route' => 'shop.callback',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Redirect route after callback
-    |--------------------------------------------------------------------------
-    |
-    | Which route to call after the callback has been processed.
-    |
-    */
-    'callback_redirect_route' => '/',
 
 ];

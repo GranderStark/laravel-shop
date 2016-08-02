@@ -85,11 +85,4 @@ interface ShopItemInterface
      */
     public function getDisplayShippingAttribute();
 
-    /**
-     * Returns flag indicating if item was purchased by user.
-     *
-     * @return bool
-     */
-    public function getWasPurchasedAttribute();
-
 }
