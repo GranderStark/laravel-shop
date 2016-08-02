@@ -17,7 +17,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Amsgames\LaravelShop\Contracts\PaymentGatewayInterface;
 
-abstract class PacymentGateway implements PaymentGatewayInterface, Arrayable, Jsonable, JsonSerializable
+abstract class PaymentGateway implements PaymentGatewayInterface, Arrayable, Jsonable, JsonSerializable
 {
     /**
      * Gateway Id, set by shop.
